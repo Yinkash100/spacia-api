@@ -22,6 +22,8 @@ router.post("/designer", auth, async (req, res)=>{
 // get a designers profile
 router.get("/designer/:username", async (req, res)=>{
     try{
+
+        // the user may not be logged in so we have to make use of the little info provided i.e username
         const user = await User.findOne({ username: req.params.username });
         const designer = await Designer.findOne({ user: user._id }).populate('user');
 

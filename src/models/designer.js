@@ -6,17 +6,7 @@ const designerSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
-    unique: true,
     ref: "User",
-  },
-  // basicDetails: {
-  //   type: mongoose.Schema.Types.ObjectId,
-  //   required: true,
-  //   ref: "User",
-  // },
-  name: {
-    type: String,
-    ref: 'User'
   },
   location: {
     type: String,
@@ -24,8 +14,12 @@ const designerSchema = new mongoose.Schema({
   profileIntro: {
     type: Boolean,
   },
-  designs: [{
-
+  clients: [{
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: "User",
+  }],
+  designDelivered: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: "Design"
   }],
@@ -33,42 +27,63 @@ const designerSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
   }],
-  points: {
-    type: Number,
-  },
-  deliveryTime: {
-    type: String,
-  },
-  designDelivered: [{
-    type: mongoose.Schema.ObjectId,
-    ref: "Design",
+  followers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
   }],
-  exponentOfDesign: {
+  designPosted: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Design"
+  }],
+  avgDeliveryTime: {
     type: String,
   },
-  designation: {
-    type: Array,
-    // Graphic Designers | UI/UX Designers | Web Designers | 3D Modelers | Illustrator | Video Producers
-  },
+  comments: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Comments"
+  }],
+  // exponentOfDesign: {
+  //   type: String,
+  // },
+  // designation: {
+  //   type: Array,
+  //   // Graphic Designers | UI/UX Designers | Web Designers | 3D Modelers | Illustrator | Video Producers
+  // },
+  designerSpecialisation: String, // 'Art Illustration',
   ratings: [{
     type: mongoose.Schema.ObjectId,
     ref: "Rating",
+  }],
+designTools: [{
+	type: String,
+}],
+  tags: [{
+    type: String,
   }]
 
 });
 
-designerSchema.virtual("email", {
-  ref: "User",
-  localField: "email",
-  foreignField: "email",
-});
+designerSchema.static.getDesignerUsername = async function (username){
+  console.log("about to get designerId");
+  const user = await User.findOne({ username, });
+  console.log("user", username);
+  const dner = await Designer.findOne({user: user._id});
+  console.log("designer", dner);
+  return dner
+};
 
-
-designerSchema.virtual("phoneNumber", {
-  ref: "User",
-  localField: "phoneName",
-  foreignField: "phoneName",
-});
+// designerSchema.virtual("email", {
+//   ref: "User",
+//   localField: "email",
+//   foreignField: "email",
+// });
+//
+//
+// designerSchema.virtual("phoneNumber", {
+//   ref: "User",
+//   localField: "phoneName",
+//   foreignField: "phoneName",
+// });
 
 const Designer = mongoose.model("Designer", designerSchema);
 module.exports = Designer;

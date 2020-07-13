@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 
 const designSchema = new mongoose.Schema({
     design: {
-        type: String,  // Url of he design in the firebase datastore
+        type: Object,  // an object that stores the name and url of the design in the firestore storage.
     },
     views: {
         type: Number, // number of views on the design have

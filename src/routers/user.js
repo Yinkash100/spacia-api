@@ -2,23 +2,63 @@ const express = require("express");
 const router = new express.Router();
 const auth = require("../middleware/auth");
 const User = require("../models/user");
-const multer = require("multer");
-const sharp = require("sharp");
+const uploader = require("../uploader");
+
+const { uploadFile, deleteFile } = require("../fireStorePlug");
+
 // const { sendWelcomeEmail } = require("../email/account");
-// const { sendWelcomeEmail, sendCancelEmail } = require("../")
+const { sendWelcomeEmail, sendCancelEmail } = require("../email/sendgridMailer");
 
 router.post("/user", async (req, res) => {
   const user = new User(req.body);
 
-  try {
-    // sendWelcomeEmail(user.email, user.name);
-    await user.save();
+  // make sure people dont update some system fields through the api
+  const fields = Object.keys(req.body);
+  req.body.activated = false;
+  const notAllowedUpdates = ['lastLogin', 'online', 'activated'];
+  const isInvalidOperation = fields.some(r=> notAllowedUpdates.indexOf(r) >= 0);
 
+
+  try {
+    if(isInvalidOperation){
+      res.status(400).send('you cannnot edit those fields')
+    }
+
+
+    await user.save();
+    const activationToken = await user.generateActivationToken();
     const token = await user.generateAuthToken();
+    sendWelcomeEmail(user.email, user.name, activationToken);
     res.status(201).send({ user, token });
   } catch (e) {
     res.status(400).send(e);
   }
+});
+
+router.get("/user/activate/:activationCode", async(req, res)=>{
+  try{
+
+    const user = await User.findOne({
+      activationToken: req.params.activationCode,
+      activationExpires: {$gte: new Date(Date.now())}
+    });
+
+    if(!user) {
+      return res.status(400).send('Invalid or expired Activation Code');
+    }
+
+    console.log('user found');
+
+    user.activated = true;
+    user.activationToken = undefined;
+    user.activationExpires = undefined;
+    await user.save();
+    res.status(200).send("Account successfully activated");
+  }
+   catch(e){
+    console.log(e);
+    res.status(404).send(e)
+   }
 });
 
 router.post("/user/login", async (req, res) => {
@@ -93,52 +133,66 @@ router.patch("/user/me", auth, async(req, res)=>{
 
 router.delete("/user/me", auth, async (req, res)=>{
   try {
+
+    // delete user avatar from storage
+    // sendCancelEmail(req.user.email. req.user.name).catch((err)=>{console.log(err)});
+    console.log(req.user.avatar);
+    if(req.user.avatar){
+      deleteFile(req.user.avatar.name).catch(console.error);
+    }
+
+    // delete all user designs
+
+    // delete designer profile
+
     await User.remove({ _id: req.user._id });
-    // sendCancelEmail(req.user.email, req.user.name);
+    sendCancelEmail(req.user.email, req.user.name);
     res.send(req.user);
   }catch(e){
     res.status(500).send();
   }
 });
 
-const upload = multer({
-  limits: {
-    fileSize: 1000000,
-  },
-  fileFilter(req, file, cb){
-    if(!file.originalname.match(/\.(jpg|jpeg|png)$/)){
-      return cb(new Error("Please enter a image file"))
-    }
-
-    cb(undefined, true)
-  }
-});
 
 
 // upload profile avatar
 router.post(
     "/users/me/avatar",
     auth,
-    upload.single("avatar"),
-    async (req, res) => {
-      console.log("looking for buffer");
-      const buffer = await sharp(req.file.buffer)
-          .png()
-          .resize({ width: 250, height: 250 })
-          .toBuffer();
-      console.log("suscessfully recieved buffer");
-      req.user.avatar = buffer;
+    uploader.single("avatar"),
+    (req, res, next) => {
+        if(!req.file){
+          res.status(400).send('No file uploaded');
+          return
+        }
 
-      await req.user.save();
-      res.send();
-    },
-    (error, req, res, next) => {
-      res.status(400).send({ error: error.message });
+        // delete previous user avatars
+        if(req.user.avatar){
+          deleteFile(req.user.avatar.name).catch(console.error);
+        }
+
+        const file = req.file;
+        uploadFile(file, 'avatars').then(async (storedItem)=>{
+          // Return the file name and its public URL
+          req.user.avatar = storedItem;
+          await req.user.save();
+          res.send(storedItem);
+
+        }).catch((error)=>{
+          console.error(error)
+        });
+
+
     }
 );
 
+
+
 // delete profile avatar
 router.delete("/users/me/avatar", auth, async (req, res)=>{
+  avatar = req.user.avatar;
+  deleteFile(avatar.name).catch(console.error);
+
   req.user.avatar = undefined;
   await req.user.save();
 

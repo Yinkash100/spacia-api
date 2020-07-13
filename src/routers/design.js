@@ -1,38 +1,46 @@
 const express = require("express");
 const router = new express.Router();
 const auth = require("../middleware/auth");
+const Designer = require("../models/designer");
 const Design = require("../models/design");
-const multer = require("multer");
-const sharp = require("sharp");
+const uploader = require("../uploader");
+const { uploadFile, deleteFile } = require("../fireStorePlug");
 
 // upload a design
 router.post(
-    "/user/design/",
+    "/design",
     auth,
-    upload.single("avatar"),
-    async (req, res) => {
-        console.log("looking for buffer");
-        const buffer = await sharp(req.file.buffer)
-            .png()
-            .resize({ width: 250, height: 250 })
-            .toBuffer();
-        console.log("suscessfully recieved buffer");
-        req.user.avatar = buffer;
+    uploader.single("design"),
+    (req, res) => {
+        if(!req.file){
+            res.status(400).send('No design file uploaded');
+            return
+        }
 
-        await req.user.save();
-        res.send();
+
+        const file = req.file;
+        uploadFile(file, 'Designs').then(async (storedItem)=>{
+            // storedItem returns the file name and its public URL
+
+            const designer = await Designer.findOne({ user: req.user._id });
+            const design = new Design({ ...req.body, design: storedItem, designer });
+
+            await design.save();
+            res.status(200).send(storedItem);
+
+        }).catch((error)=>{
+            console.error(error)
+        });
+
     },
-    (error, req, res, next) => {
-        res.status(400).send({ error: error.message });
-    }
+
 );
 
 
 
 
 // view design
-// view user avatar
-router.get("users/:id/avatar", auth, async (req, res)=> {
+router.get("/design", auth, async (req, res)=> {
     try{
         const user = await User.findById(req.params.id);
 
@@ -49,6 +57,16 @@ router.get("users/:id/avatar", auth, async (req, res)=> {
 
 
 // delete design
+router.delete("/user/me", auth, async (req, res)=>{
+    try {
+        await User.remove({ _id: req.user._id });
+        // sendCancelEmail(req.user.email, req.user.name);
+        res.send(req.user);
+    }catch(e){
+        res.status(500).send();
+    }
+});
+
 
 // change design privacy
 

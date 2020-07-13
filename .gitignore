@@ -1,2 +1,6 @@
 config
 node_modules
+/api/services/*.json
+api/services
+api
+
