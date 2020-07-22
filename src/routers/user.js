@@ -2,12 +2,12 @@ const express = require("express");
 const router = new express.Router();
 const auth = require("../middleware/auth");
 const User = require("../models/user");
-const uploader = require("../uploader");
+const { imageUploader } = require("../uploader");
 
 const { uploadFile, deleteFile } = require("../fireStorePlug");
 
 // const { sendWelcomeEmail } = require("../email/account");
-const { sendWelcomeEmail, sendCancelEmail } = require("../email/sendgridMailer");
+const { sendWelcomeEmail, sendCancelEmail, sendActivationEmail } = require("../email/sendgridMailer");
 
 router.post("/user", async (req, res) => {
   const user = new User(req.body);
@@ -27,8 +27,10 @@ router.post("/user", async (req, res) => {
 
     await user.save();
     const activationToken = await user.generateActivationToken();
+    const activationLink = `http://spacialab.com/account_activate/${activationToken}`
     const token = await user.generateAuthToken();
     sendWelcomeEmail(user.email, user.name, activationToken);
+    sendActivationEmail(user.email, user.name, activationLink)
     res.status(201).send({ user, token });
   } catch (e) {
     res.status(400).send(e);
@@ -135,11 +137,12 @@ router.delete("/user/me", auth, async (req, res)=>{
   try {
 
     // delete user avatar from storage
-    // sendCancelEmail(req.user.email. req.user.name).catch((err)=>{console.log(err)});
-    console.log(req.user.avatar);
     if(req.user.avatar){
       deleteFile(req.user.avatar.name).catch(console.error);
     }
+
+    // send cancel email
+    sendCancelEmail(req.user.email. req.user.name).catch((err)=>{console.log(err)});
 
     // delete all user designs
 
@@ -159,7 +162,7 @@ router.delete("/user/me", auth, async (req, res)=>{
 router.post(
     "/users/me/avatar",
     auth,
-    uploader.single("avatar"),
+    imageUploader.single("avatar"),
     (req, res, next) => {
         if(!req.file){
           res.status(400).send('No file uploaded');
@@ -169,11 +172,14 @@ router.post(
         // delete previous user avatars
         if(req.user.avatar){
           deleteFile(req.user.avatar.name).catch(console.error);
+          console.log('Scuussfully deleted previous avatar');
         }
 
         const file = req.file;
-        uploadFile(file, 'avatars').then(async (storedItem)=>{
-          // Return the file name and its public URL
+        console.log('avatarFile =>', file)
+        uploadFile(file, `spacialab/users/${req.user.username}/avatar`)
+          .then(async (storedItem)=>{
+          // Returns the file name and its public URL
           req.user.avatar = storedItem;
           await req.user.save();
           res.send(storedItem);
@@ -190,13 +196,20 @@ router.post(
 
 // delete profile avatar
 router.delete("/users/me/avatar", auth, async (req, res)=>{
-  avatar = req.user.avatar;
-  deleteFile(avatar.name).catch(console.error);
+  if(!req.user.avatar){
+    return res.status(404).send('Avatar not found');
+  }
+  const avatar = req.user.avatar;
+
+  deleteFile(avatar.name).catch((error)=>{
+    console.log('Hole up, An error occured, cannot delete avatar', error)
+    return res.status(400).send('Cannot delete avatar')
+  });
 
   req.user.avatar = undefined;
   await req.user.save();
 
-  res.send();
+  res.status(200).send();
 });
 
 // view user avatar

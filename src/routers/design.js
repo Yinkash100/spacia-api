@@ -3,14 +3,14 @@ const router = new express.Router();
 const auth = require("../middleware/auth");
 const Designer = require("../models/designer");
 const Design = require("../models/design");
-const uploader = require("../uploader");
+const { imageUploader } = require("../uploader");
 const { uploadFile, deleteFile } = require("../fireStorePlug");
 
 // upload a design
 router.post(
     "/design",
     auth,
-    uploader.single("design"),
+    imageUploader.single("design"),
     (req, res) => {
         if(!req.file){
             res.status(400).send('No design file uploaded');
