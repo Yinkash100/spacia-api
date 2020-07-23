@@ -27,7 +27,7 @@ router.post("/user", async (req, res) => {
 
     await user.save();
     const activationToken = await user.generateActivationToken();
-    const activationLink = `http://spacialab.com/account_activate/${activationToken}`
+    const activationLink = `${process.env.FRONT_END_URL}/account_activate/${activationToken}`;
     const token = await user.generateAuthToken();
     sendWelcomeEmail(user.email, user.name, activationToken);
     sendActivationEmail(user.email, user.name, activationLink)
