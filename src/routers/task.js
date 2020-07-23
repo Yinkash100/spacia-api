@@ -14,15 +14,18 @@ router.post("/task", auth, fileUploader.array('taskFiles', 10),  async (req, res
 
     for (let i = 0; i < files.length; i++){
       const file = files[i];
-      uploadFile(file, `spacialab/taskFiles/${req.user.username}/${task.id}`)
+      const attachment = await uploadFile(file, `spacialab/taskFiles/${req.user.username}/${task.id}`)
         .then((storedItem) => {
           // Return the file name and its public URL
-          task.attachments.push(storedItem);
+//           task.attachment.push(storedItem)
+          return storedItem
         })
         .catch((error) => {
-          console.log(error);
+          // console.log(error);
           return req.status(400).send('cannot upload files')
         });
+      // console.log(attachment)
+      task.attachments.push(attachment)
 
     }
 
