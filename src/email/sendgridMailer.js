@@ -35,7 +35,7 @@ Community Recruit Lead
 const sendActivationEmail = (email, name, activationLink) => {
   sgMail.send({
     to: email,
-    from: "Moses@spacialab.com",
+    from: "Spacialab@spacialab.com",
     subject: `SpaciaLab activation link`,
     text: `Hi ${name},
     

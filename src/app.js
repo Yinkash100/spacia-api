@@ -1,4 +1,5 @@
 const express = require("express");
+const cors = require("cors");
 require("./db/mongoose");
 
 
@@ -9,7 +10,12 @@ const taskRouter = require("./routers/task");
 
 const app = express();
 
+
+
 app.use(express.json());
+
+app.use(cors({origin: true, credentials: true}));
+
 app.use(userRouter);
 app.use(designerRouter);
 app.use(designRouter);
