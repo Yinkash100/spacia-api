@@ -201,7 +201,7 @@ router.delete("/users/me/avatar", auth, async (req, res)=>{
   }
   const avatar = req.user.avatar;
 
-  deleteFile(avatar.name).catch((error)=>{
+  deleteFile(avatar.location).catch((error)=>{
     console.log('Hole up, An error occured, cannot delete avatar', error)
     return res.status(400).send('Cannot delete avatar')
   });

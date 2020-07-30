@@ -33,7 +33,7 @@ const uploadFile =   (file, uploadFolder)=>{
             const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${
                 bucket.name
             }/o/${encodeURI(blob.name)}?alt=media`;
-            resolve({name: newFileName, url: publicUrl})
+            resolve({name: file.originalname, location: newFileName, url: publicUrl})
         });
 
         // When there is no more data to be consumed from the stream
